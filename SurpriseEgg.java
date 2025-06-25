@@ -15,20 +15,24 @@ public class SurpriseEgg extends Egg
         return value;
     }
 
-    public static List<SurpriseEgg> generateListOfSurpriseEggs(int amount, World world) {
-        List<SurpriseEgg> list = new ArrayList<>();
-        Random rand = new Random();
+   public static List<SurpriseEgg> generateListOfSurpriseEggs(int amount, World world) {
+    List<SurpriseEgg> list = new ArrayList<>();
+    Random rand = new Random();
 
-        for (int i = 0; i < amount; i++) {
-            int x = rand.nextInt(world.getWidth());
-            int y = rand.nextInt(world.getHeight());
-            int value = 1 + rand.nextInt(10); // waarde tussen 1 en 10
-
+    int tries = 0;
+    while (list.size() < amount && tries < amount * 10) {
+        int x = rand.nextInt(world.getWidth());
+        int y = rand.nextInt(world.getHeight());
+        if (world.getObjectsAt(x, y, null).isEmpty()) {
+            int value = 1 + rand.nextInt(10);
             SurpriseEgg egg = new SurpriseEgg(x, y, value);
             world.addObject(egg, x, y);
             list.add(egg);
         }
-
-        return list;
+        tries++;
     }
+
+    return list;
 }
+}
+

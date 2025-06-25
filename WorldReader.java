@@ -1,11 +1,11 @@
 /**
+ * Write a description of class WordReader here.
  * 
- * @author Sjaak Smetsers & Renske Smetsers-Weeda
- * @version 3.1 -- 03-07-2017
+ * @author Sjaak Smetsers
+ * @version 1.0 -- 20-01-2015
  */
 
 import java.util.Random;
-import java.io.File;
 import java.io.FileReader;
 import java.io.LineNumberReader;
 import java.io.IOException;
@@ -44,17 +44,19 @@ public class WorldReader
     
     private static final int EOF_CHAR = -1;
 
+    private String worldTitle;
     private int worldWidth = -1, worldHeight = -1;
     
    
     /**
      * Constructor for objects of class WordReader
      */
-    public WorldReader ( File worldFile ) {
+    public WorldReader ( String name ) {
         try {
-            FileReader file = new FileReader( worldFile );
+            FileReader file = new FileReader( "worlds/" + name );
             worldReader = new LineNumberReader ( file );
             currentChar = worldReader.read();
+            readTitle ();
             readSize  ();
             readGrid  ();
         } catch (IOException ioe) {
@@ -67,11 +69,22 @@ public class WorldReader
        return c == '\n' || c == '\r';
     }
     
+    private String TITLE_KEY = "TITLE", SIZE_KEY = "SIZE";
+    
+    private void readTitle () throws IOException {
+        if ( readerStartsWith( TITLE_KEY ) ) {
+            skipSpaces ();
+            worldTitle = "" + (char) currentChar + worldReader.readLine();
+            currentChar = worldReader.read();
+        }
+    }
 
     private void readSize () throws IOException {
-        worldWidth  = FindNumber ();
-        worldHeight = FindNumber ();
-        skipSpaces ();
+        if ( readerStartsWith( SIZE_KEY ) ) {
+            worldWidth  = FindNumber ();
+            worldHeight = FindNumber ();
+            skipSpaces ();
+        }
     }
 
     private void readGrid () throws IOException {
@@ -96,15 +109,31 @@ public class WorldReader
         }
     }
             
-    private int readNumber ( ) throws IOException {
-        int number  = Character.digit ( currentChar, 10 );
-        for (currentChar = worldReader.read(); Character.isDigit(currentChar);
-             currentChar = worldReader.read()) {
-            number = number*10 + Character.digit ( currentChar, 10 );
+	private int readNumber ( ) throws IOException {
+		int number  = Character.digit ( currentChar, 10 );
+		for (currentChar = worldReader.read(); Character.isDigit(currentChar);
+			 currentChar = worldReader.read()) {
+			number = number*10 + Character.digit ( currentChar, 10 );
         }
         return number;
-    }
+	}
     
+    private boolean readerStartsWith ( String keyword ) throws IOException {
+        int pos = 0;
+        worldReader.mark( keyword.length() );
+        while ( pos < keyword.length() && keyword.charAt( pos ) == Character.toUpperCase( currentChar ) ) {
+            currentChar = worldReader.read();
+            pos++;
+        }
+        if ( pos == keyword.length() ) {
+            return true;
+        } else {
+            worldReader.reset();
+            return false;
+        }
+           
+    }
+            
     private void findNext () throws IOException {
         boolean found = false;       
         while ( currentChar != EOF_CHAR && ! found )
@@ -119,14 +148,6 @@ public class WorldReader
         }
     }
     
-    public int getWorldWidth() {
-        return worldWidth;
-    }
-    
-    public int getWorldHeight() {
-        return worldHeight;
-    }
-    
     public boolean hasNext () {
         return currentChar != EOF_CHAR;
     }
@@ -137,10 +158,6 @@ public class WorldReader
         currentPosition++;
         findNext ();        
         return current_cell;
-    }
-    
-    public void close() throws IOException {
-        worldReader.close();
-    }
+    }    
 
 }

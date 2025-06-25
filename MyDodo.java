@@ -10,9 +10,21 @@ public class MyDodo extends Dodo {
     private List<SurpriseEgg> surpriseEggs;
     private Nest nest;
     private boolean done;
+    private boolean surpriseEggsGenerated = false;
+    public boolean isAtNest() {
+        return this.getX() == nest.getX() && this.getY() == nest.getY();
+    }
+
+    private boolean isAtLocation(int x, int y) {
+        return Math.abs(getX() - x) < 5 && Math.abs(getY() - y) < 5;
+    }
+
+
+    
 
     public MyDodo() {
         super(EAST);
+        surpriseEggs = new ArrayList<>();
     }
 
     private int dist(int x1, int y1, int x2, int y2) {
@@ -31,38 +43,103 @@ public class MyDodo extends Dodo {
         }
         return best;
     }
-
-    public void act() {
-        if (done)
-            return;
-        if (eggs == null) {
-
-            eggs = getWorld().getObjects(Egg.class);
-            List<Nest> n = getWorld().getObjects(Nest.class);
-            if (!n.isEmpty())
-                nest = n.get(0);
-        }
-        if (!eggs.isEmpty()) {
-            Egg target = nearestEgg();
-            if (target != null) {
-                goToLocation(target.getX(), target.getY());
-                pickUpEgg();
-                eggs.remove(target);
-            }
-            
-        if (surpriseEggs == null) {
-            generateSurpriseEggs();
-        }
-        } else if (nest != null) {
-            goToLocation(nest.getX(), nest.getY());
-            if (canLayEgg())
-                layEgg();
-            Greenfoot.stop();
-            done = true;
-        }
-        stepsLeft--;
-        updateScoreboard();
+    
+private SurpriseEgg nearestSurpriseEgg() {
+    if (surpriseEggs == null || surpriseEggs.isEmpty()) {
+        return null;
     }
+
+    SurpriseEgg best = null;
+    int bestD = Integer.MAX_VALUE;
+    for (SurpriseEgg e : surpriseEggs) {
+        int d = dist(getX(), getY(), e.getX(), e.getY());
+        if (d < bestD) {
+            bestD = d;
+            best = e;
+        }
+    }
+    return best;
+}
+
+
+public Egg pickUpEgg() {
+    Egg maybeEgg = getEgg();
+    if (maybeEgg == null) {
+        showError("There is no egg in this cell");
+        Greenfoot.stop();
+    } else {
+        getWorld().removeObject(maybeEgg);
+        if (maybeEgg instanceof SurpriseEgg) {
+            score += ((SurpriseEgg) maybeEgg).getValue();
+        } else {
+            score += 1;
+        }
+    }
+    return maybeEgg;
+}
+
+
+
+
+
+public void act() {
+    this.nest = (Nest)getWorld().getObjects(Nest.class).get(0);
+    if (done)
+        return;
+
+    if (eggs == null) {
+        eggs = getWorld().getObjects(Egg.class);
+        List<Nest> n = getWorld().getObjects(Nest.class);
+        if (!n.isEmpty())
+            nest = n.get(0);
+
+        if (!surpriseEggsGenerated) {
+            generateSurpriseEggs();
+            surpriseEggsGenerated = true;
+        }
+    }
+
+    // ? Eerst checken of alles op is
+    if (eggs.isEmpty() && (surpriseEggs == null || surpriseEggs.isEmpty())) {
+        if (isAtNest()) {
+            getWorld().addObject(new Compliment("Gefeliciteerd alles gevonden!"), getWorld().getWidth()/2, getWorld().getHeight()/2);
+            done = true;
+        } else {
+            goToLocation(nest.getX(), nest.getY());
+        }
+        return;
+    }
+
+    // Daarna pas doorgaan met zoeken
+    Egg target = nearestEgg();
+    SurpriseEgg sTarget = nearestSurpriseEgg();
+
+    Egg nearest = null;
+    if (target != null && sTarget != null) {
+        nearest = (dist(getX(), getY(), target.getX(), target.getY()) <= dist(getX(), getY(), sTarget.getX(), sTarget.getY())) ? target : sTarget;
+    } else if (target != null) {
+        nearest = target;
+    } else if (sTarget != null) {
+        nearest = sTarget;
+    }
+
+    if (nearest != null) {
+        goToLocation(nearest.getX(), nearest.getY());
+        pickUpEgg();
+        if (nearest instanceof SurpriseEgg) {
+            surpriseEggs.remove(nearest);
+        } else {
+            eggs.remove(nearest);
+        }
+    }
+
+
+
+
+    stepsLeft--;
+    updateScoreboard();
+}
+
 
 
     public void move() {
